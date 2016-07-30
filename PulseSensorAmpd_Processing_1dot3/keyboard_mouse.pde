@@ -4,11 +4,17 @@ void mousePressed(){
   if(!serialPortFound){
     for(int i=0; i<button.length; i++){
       if(button[i].pressRadio(mouseX,mouseY)){
-        port = new Serial(this, Serial.list()[i], 115200);  // make sure Arduino is talking serial at this baud rate
-        port.clear();            // flush buffer
-        port.bufferUntil('\n');  // set buffer full flag on receipt of carriage return
-        serialPortFound = true;
-        return;
+        try{
+          port = new Serial(this, Serial.list()[i], 115200);  // make sure Arduino is talking serial at this baud rate
+          delay(1000);
+          println(port.read());
+          port.clear();            // flush buffer
+          port.bufferUntil('\n');  // set buffer full flag on receipt of carriage return
+          serialPortFound = true;
+        }
+        catch(Exception e){
+          println("Couldn't open port " + Serial.list()[i]);
+        }
       }
     }
   }

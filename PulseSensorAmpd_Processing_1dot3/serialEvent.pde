@@ -2,10 +2,11 @@
 
 
 
-void serialEvent(Serial port){ 
+void serialEvent(Serial port){
+try{
    String inData = port.readStringUntil('\n');
    inData = trim(inData);                 // cut off white space (carriage return)
-   
+
    if (inData.charAt(0) == 'S'){          // leading 'S' for sensor data
      inData = inData.substring(1);        // cut off the leading 'S'
      Sensor = int(inData);                // convert the string to usable int
@@ -16,8 +17,12 @@ void serialEvent(Serial port){
      beat = true;                         // set beat flag to advance heart rate graph
      heart = 20;                          // begin heart image 'swell' timer
    }
- if (inData.charAt(0) == 'Q'){            // leading 'Q' means IBI data 
+ if (inData.charAt(0) == 'Q'){            // leading 'Q' means IBI data
      inData = inData.substring(1);        // cut off the leading 'Q'
      IBI = int(inData);                   // convert the string to usable int
    }
+} catch(Exception e) {
+  // println(e.toString());
+}
+
 }

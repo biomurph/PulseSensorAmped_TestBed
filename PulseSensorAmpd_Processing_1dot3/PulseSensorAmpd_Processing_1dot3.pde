@@ -3,6 +3,10 @@ THIS PROGRAM WORKS WITH PulseSensorAmped_Arduino-xx ARDUINO CODE
 THE PULSE DATA WINDOW IS SCALEABLE WITH SCROLLBAR AT BOTTOM OF SCREEN
 PRESS 'S' OR 's' KEY TO SAVE A PICTURE OF THE SCREEN IN SKETCH FOLDER (.jpg)
 MADE BY JOEL MURPHY AUGUST, 2012
+UPDATED BY JOEL MURPHY JULY 2016 WITH SERIAL PORT LOCATOR TOOL
+
+THIS CODE PROVIDED AS IS, WITH NO CLAIMS OF FUNCTIONALITY OR EVEN IF IT WILL WORK
+      WYSIWYG
 */
 
 
@@ -30,6 +34,7 @@ int BPMWindowWidth = 180;
 int BPMWindowHeight = 340;
 boolean beat = false;    // set when a heart beat is detected, then cleared when the BPM graph is advanced
 
+// SERIAL PORT STUFF TO HELP YOU FIND THE CORRECT SERIAL PORT
 String serialPort;
 String[] serialPorts = new String[Serial.list().length];
 boolean serialPortFound = false;
@@ -62,42 +67,57 @@ void setup() {
  background(0);
  noStroke();
  // DRAW OUT THE PULSE WINDOW AND BPM WINDOW RECTANGLES
- fill(eggshell);  // color for the window background
- rect(255,height/2,PulseWindowWidth,PulseWindowHeight);
- rect(600,385,BPMWindowWidth,BPMWindowHeight);
+ drawDataWindows();
  drawHeart();
- 
+
 // GO FIND THE ARDUINO
   fill(eggshell);
   text("Select Your Serial Port",245,30);
-  println(Serial.list());    // print a list of available serial ports
-  serialPorts = Serial.list();
-  fill(0);
-  textFont(font,16);
-  textAlign(LEFT);
-  for(int i = 0; i < serialPorts.length; i++){
-    button[i] = new Radio(85, 95+(i*20),12,color(180),color(80),color(255),i,button);
-    text(serialPorts[i],100, 100+(i*20));
-  }
-  textFont(font);
-  textAlign(CENTER);
+  listAvailablePorts();
 
-  //port = new Serial(this, Serial.list()[7], 115200);  // make sure Arduino is talking serial at this baud rate
-  //port.clear();            // flush buffer
-  //port.bufferUntil('\n');  // set buffer full flag on receipt of carriage return
 }
 
 void draw() {
 if(serialPortFound){
-
+  // ONLY RUN THE VISUALIZER AFTER THE PORT IS CONNECTED
   background(0);
   noStroke();
-// DRAW OUT THE PULSE WINDOW AND BPM WINDOW RECTANGLES
-  fill(eggshell);  // color for the window background
-  rect(255,height/2,PulseWindowWidth,PulseWindowHeight);
-  rect(600,385,BPMWindowWidth,BPMWindowHeight);
+  drawDataWindows();
+  drawPulseWaveform();
+  drawBPMwaveform();
+  drawHeart();
+// PRINT THE DATA AND VARIABLE VALUES
+  fill(eggshell);                                       // get ready to print text
+  text("Pulse Sensor Amped Visualizer",245,30);     // tell them what you are
+  text("IBI " + IBI + "mS",600,585);                    // print the time between heartbeats in mS
+  text(BPM + " BPM",600,200);                           // print the Beats Per Minute
+  text("Pulse Window Scale " + nf(zoom,1,2), 150, 585); // show the current scale of Pulse Window
 
-// DRAW THE PULSE WAVEFORM
+//  DO THE SCROLLBAR THINGS
+  scaleBar.update (mouseX, mouseY);
+  scaleBar.display();
+
+} else { // SCAN BUTTONS TO FIND THE SERIAL PORT
+
+  for(int i=0; i<button.length; i++){
+    button[i].overRadio(mouseX,mouseY);
+    button[i].displayRadio();
+  }
+
+}
+
+}  //end of draw loop
+
+
+void drawDataWindows(){
+    // DRAW OUT THE PULSE WINDOW AND BPM WINDOW RECTANGLES
+    fill(eggshell);  // color for the window background
+    rect(255,height/2,PulseWindowWidth,PulseWindowHeight);
+    rect(600,385,BPMWindowWidth,BPMWindowHeight);
+}
+
+void drawPulseWaveform(){
+  // DRAW THE PULSE WAVEFORM
   // prepare pulse data points
   RawY[RawY.length-1] = (1023 - Sensor) - 212;   // place the new raw datapoint at the end of the array
   zoom = scaleBar.getPos();                      // get current waveform scale value
@@ -114,7 +134,9 @@ if(serialPortFound){
     vertex(x+10, ScaledY[x]);                    //draw a line connecting the data points
   }
   endShape();
+}
 
+void drawBPMwaveform(){
 // DRAW THE BPM WAVE FORM
 // first, shift the BPM waveform over to fit then next data point only when a beat is found
  if (beat == true){   // move the heart rate line over one pixel every time the heart beats
@@ -136,32 +158,7 @@ if(serialPortFound){
    vertex(i+510, rate[i]);                 // display history of heart rate datapoints
  }
  endShape();
-
-
-
-
-// PRINT THE DATA AND VARIABLE VALUES
-  fill(eggshell);                                       // get ready to print text
-  text("Pulse Sensor Amped Visualizer",245,30);     // tell them what you are
-  text("IBI " + IBI + "mS",600,585);                    // print the time between heartbeats in mS
-  text(BPM + " BPM",600,200);                           // print the Beats Per Minute
-  text("Pulse Window Scale " + nf(zoom,1,2), 150, 585); // show the current scale of Pulse Window
-
-//  DO THE SCROLLBAR THINGS
-  scaleBar.update (mouseX, mouseY);
-  scaleBar.display();
-
-} else { //end of if(serialPortFound)
-
-  for(int i=0; i<button.length; i++){
-    button[i].overRadio(mouseX,mouseY);
-    button[i].displayRadio(); 
-  }
-  
 }
-  
-}  //end of draw loop
-
 
 void drawHeart(){
   // DRAW THE HEART AND MAYBE MAKE IT BEAT
@@ -177,4 +174,21 @@ void drawHeart(){
     bezier(width-100,50, width-20,-20, width,140, width-100,150);
     bezier(width-100,50, width-190,-20, width-200,140, width-100,150);
     strokeWeight(1);          // reset the strokeWeight for next time
+}
+
+void listAvailablePorts(){
+  println(Serial.list());    // print a list of available serial ports to the console
+  serialPorts = Serial.list();
+  fill(0);
+  textFont(font,16);
+  textAlign(LEFT);
+  // set a counter to list the ports backwards
+  int yPos = 0;
+  for(int i=serialPorts.length-1; i>=0; i--){
+    button[i] = new Radio(35, 95+(yPos*20),12,color(180),color(80),color(255),i,button);
+    text(serialPorts[i],50, 100+(yPos*20));
+    yPos++;
+  }
+  textFont(font);
+  textAlign(CENTER);
 }
